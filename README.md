@@ -1,3 +1,3 @@
 # Chatting-room
 
-Simple chatting room application implemented using Python socket and PySide.
+Chatting room application implemented using PySide Qt / Python 3.
