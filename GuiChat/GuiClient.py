@@ -60,12 +60,23 @@ class MainWindow(QWidget):
 
         self.layout.addLayout(self.hlayout_top)
 
+        self.hlayout_mid = QHBoxLayout()
+
         # Setup window for chatting history
         self._chatting_text = QTextEdit(self)
+        self._chatting_text.setReadOnly(True)
         self._chatting_text.setMinimumHeight(80)
         self._chatting_text.setStyleSheet('QTextEdit { font: 13px; } QTextEdit[class=invalid] { background-color: #FFCDCD; };')
+        self.hlayout_mid.addWidget(self._chatting_text)
 
-        self.layout.addWidget(self._chatting_text)
+        # Setup window for user list
+        self.users_list = QTextEdit(self)
+        self.users_list.setReadOnly(True)
+        self.users_list.setStyleSheet('QTextEdit { font: 13px; } QTextEdit[class=invalid] { background-color: #FFCDCD; };')
+        self.users_list.setFixedWidth(200)
+        self.hlayout_mid.addWidget(self.users_list)
+
+        self.layout.addLayout(self.hlayout_mid)
 
         self.enter_label = self.AddLabel('Please enter: ', self.layout)
 
@@ -98,9 +109,8 @@ class MainWindow(QWidget):
         '''
         When say button clicked, generate the message to be sent to chat server.
         '''
-        curText = socket.gethostname() + ' ' + datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S') + ' :' + '\n' + self.enter_text.text() + '\n\n'
-        self.chatting_log = self.chatting_log + curText
-        self._chatting_text.setText(self.chatting_log)
+        curText = socket.gethostname() + ' ' + datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S') + ' :' + '\n' + self.enter_text.text() + '\n'
+        self._chatting_text.append(curText)
 
         if curText:
             self.sock.write(curText.encode())
@@ -135,8 +145,8 @@ class MainWindow(QWidget):
         '''
         When socket connected, show text in chat history box to inform user.
         '''
-        self.chatting_log = 'Connected to chat server. You can start sending messages.\n\n'
-        self._chatting_text.setText(self.chatting_log)
+        self.chatting_log = 'Connected to chat server. You can start sending messages.\n'
+        self._chatting_text.append(self.chatting_log)
         self.enter_text.setFocus()
 
 
@@ -145,11 +155,20 @@ class MainWindow(QWidget):
         '''
         When there is incoming data, read the data.
         '''
-        while self.sock.canReadLine():
-            line = self.sock.readLine()
-            self.chatting_log = self.chatting_log + str(line)
-        self.chatting_log = self.chatting_log
-        self._chatting_text.setText(self.chatting_log)
+        text = ''
+        if self.sock.isReadable():
+            text = str(self.sock.readAll())
+
+        # seperate the user list message and client chat history messsage
+        if text.startswith('User: '):
+            if 'Client' in text:
+                text_l = text.split('Client')
+                self.users_list.setText(text_l[0])
+                self._chatting_text.append('Client' + text_l[1])
+            else:
+                self.users_list.setText(text)
+        else:
+            self._chatting_text.append(text)
 
 
 def main(argv):
